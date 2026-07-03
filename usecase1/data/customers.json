@@ -1,0 +1,20 @@
+[
+  {
+    "id": "CUST001",
+    "name": "ABC Medical Inc",
+    "email": "orders@abcmedical.com",
+    "address": "123 Medical Drive, Chicago IL 60601"
+  },
+  {
+    "id": "CUST002",
+    "name": "XYZ Healthcare",
+    "email": "purchasing@xyzhealthcare.com",
+    "address": "456 Health Ave, New York NY 10001"
+  },
+  {
+    "id": "CUST003",
+    "name": "Delta Supplies Ltd",
+    "email": "orders@deltasupplies.com",
+    "address": "789 Supply Road, Dallas TX 75201"
+  }
+]

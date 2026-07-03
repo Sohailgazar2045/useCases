@@ -1,0 +1,37 @@
+[
+  {
+    "status": "success",
+    "order_id": "SO-2026-00124",
+    "customer_id": "CUST001",
+    "customer_name": "ABC Medical Inc",
+    "po_number": "PO-2026-PERFECT-001",
+    "delivery_date": "16 July 2026",
+    "line_count": 3,
+    "line_items": [
+      {
+        "part_number": "MED-1001",
+        "description": "Surgical Gloves Box — Latex Free, Size Medium",
+        "quantity": 10,
+        "unit_price": 45.0,
+        "line_total": 450.0
+      },
+      {
+        "part_number": "MED-1002",
+        "description": "Sterile Bandages — Standard Wound Dressing Pack",
+        "quantity": 12,
+        "unit_price": 23.5,
+        "line_total": 282.0
+      },
+      {
+        "part_number": "MED-1003",
+        "description": "Disposable Syringes — 5ml, Sterile, Single Use",
+        "quantity": 30,
+        "unit_price": 18.0,
+        "line_total": 540.0
+      }
+    ],
+    "total_amount": 1272.0,
+    "created_at": "2026-07-03 15:05:44",
+    "message": "Sales order created successfully in D365 F&O"
+  }
+]
