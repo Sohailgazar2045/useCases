@@ -137,7 +137,7 @@ Customer name runs the same idea: exact → 🟡 variation flag → 🟠 review 
 
 | Stage | Module | Responsibility |
 |-------|--------|----------------|
-| 1 Intake / UI | `app.py` | source selector, preview, review screen, actions |
+| 1 Intake / UI | `ui.py` | source selector, preview, review screen, actions |
 | 2 Extract | `extractor.py` | PDF/text/image → OpenAI → normalized JSON |
 | 3 Match | `matcher.py` | customer/product match, price validation, flags |
 | 5 Create | `order_creator.py` | mock D365 confirmation + persist to `orders.json` |
