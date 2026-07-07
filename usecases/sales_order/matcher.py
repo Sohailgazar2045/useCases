@@ -59,6 +59,17 @@ def load_products() -> list[dict[str, Any]]:
     return _load("products.json")
 
 
+def load_pricing() -> dict[str, dict[str, Any]]:
+    """Return a {part_number: {unit_price, currency}} map from pricing.json.
+
+    Pricing lives in its own file (the ERP price list) rather than on the
+    product record, mirroring how a real D365 item master and trade agreements
+    are kept separate.
+    """
+    rows = _load("pricing.json")
+    return {r["part_number"]: r for r in rows}
+
+
 # --------------------------------------------------------------------------- #
 # Customer matching
 # --------------------------------------------------------------------------- #
@@ -206,29 +217,45 @@ def match_product(item: dict[str, Any], products: list[dict[str, Any]]) -> dict[
 # --------------------------------------------------------------------------- #
 # Price validation
 # --------------------------------------------------------------------------- #
-def validate_price(item: dict[str, Any], product_match: dict[str, Any]) -> dict[str, Any]:
+def validate_price(
+    item: dict[str, Any],
+    product_match: dict[str, Any],
+    pricing: dict[str, dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     """
     extracted == master   -> ok
     extracted != master   -> flag + difference
     not extracted         -> use master price + note
+
+    The master price is looked up in the ERP price list (pricing.json) by the
+    matched product's part number.
     """
+    pricing = pricing if pricing is not None else load_pricing()
     master = product_match.get("matched")
     extracted = item.get("unit_price")
 
+    master_price = None
+    if master is not None:
+        price_row = pricing.get(master.get("part_number"))
+        master_price = price_row["unit_price"] if price_row else None
+
     out: dict[str, Any] = {
         "extracted_price": extracted,
-        "master_price": master["unit_price"] if master else None,
+        "master_price": master_price,
         "effective_price": extracted,
         "status": "ok",
         "flag": None,
     }
 
-    if master is None:
+    # No matched product, or matched but absent from the price list.
+    if master is None or master_price is None:
         out["status"] = "no_master"
         out["effective_price"] = extracted
+        if master is not None and master_price is None:
+            out["flag"] = (
+                f"No price on file for {master.get('part_number')} — review pricing"
+            )
         return out
-
-    master_price = master["unit_price"]
 
     # Treat a missing OR zero price as "not extracted" — the extraction model
     # tends to emit 0.0 rather than null when no price appears in the document.
@@ -270,6 +297,7 @@ def match_order(order: dict[str, Any]) -> dict[str, Any]:
     """
     customers = load_customers()
     products = load_products()
+    pricing = load_pricing()
 
     customer = match_customer(order.get("customer_name"), customers)
 
@@ -280,17 +308,24 @@ def match_order(order: dict[str, Any]) -> dict[str, Any]:
     if customer.get("flag"):
         flags.append("⚠️ " + customer["flag"])
 
+    if not order.get("line_items"):
+        flags.append("⚠️ No line items extracted — low-confidence extraction")
+
     for idx, item in enumerate(order.get("line_items", []), start=1):
         product = match_product(item, products)
-        price = validate_price(item, product)
+        price = validate_price(item, product, pricing)
 
-        qty = item.get("quantity") or 0
+        raw_qty = item.get("quantity")
+        qty_missing = not raw_qty or raw_qty <= 0
+        qty = raw_qty or 0
         eff = price.get("effective_price")
         line_total = (eff or 0) * qty
         total += line_total
 
         if product.get("flag"):
             flags.append(f"⚠️ Line {idx}: {product['flag']}")
+        if qty_missing:
+            flags.append(f"⚠️ Line {idx}: missing or zero quantity — confirm with customer")
         if price.get("flag"):
             flags.append(f"⚠️ Line {idx}: {price['flag']}")
 
@@ -300,6 +335,7 @@ def match_order(order: dict[str, Any]) -> dict[str, Any]:
                 "product": product,
                 "price": price,
                 "line_total": line_total,
+                "qty_missing": qty_missing,
             }
         )
 

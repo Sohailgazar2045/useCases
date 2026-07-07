@@ -1,13 +1,15 @@
 """
-extractor.py — Extract structured purchase-order data from a PDF using OpenAI.
+extractor.py — Extract structured purchase-order data with LangChain + OpenAI.
 
 Flow:
-    PDF bytes/path
-      -> pdfplumber extracts text
-      -> if text is empty (scanned/image PDF) -> render page to PNG and use
-         OpenAI vision
-      -> send to OpenAI with a strict JSON prompt
-      -> parse and return structured order data (dict)
+    PDF bytes/path / raw text / image bytes
+      -> pdfplumber pulls text from text-based PDFs
+      -> scanned PDFs and images are rendered/normalized to PNG
+      -> LangChain (ChatOpenAI, structured output) returns a typed PurchaseOrder
+      -> the Pydantic result is normalized to the dict shape downstream expects
+
+LangChain provides the prompt template, model abstraction, and structured-output
+parsing; OpenAI GPT-4o (text + vision) is the underlying model.
 """
 
 from __future__ import annotations
@@ -15,47 +17,65 @@ from __future__ import annotations
 import base64
 import io
 import json
-from typing import Any
+from typing import Any, List, Optional
 
 import pdfplumber
-from openai import OpenAI
+from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_openai import ChatOpenAI
+from pydantic import BaseModel, Field
 
 from shared.config import OPENAI_MODEL as MODEL
-from shared.config import get_openai_client
+from shared.config import get_openai_api_key
 
-EXTRACTION_PROMPT = """You are an AI that extracts purchase order data from documents.
 
-Extract the following fields and return ONLY valid JSON:
-{
-  "customer_name": "",
-  "po_number": "",
-  "order_date": "",
-  "delivery_date": "",
-  "shipping_address": "",
-  "line_items": [
-    {
-      "part_number": "",
-      "description": "",
-      "quantity": 0,
-      "unit_price": 0.0
-    }
-  ]
-}
+# --------------------------------------------------------------------------- #
+# Structured-output schema (LangChain coerces the model's reply into this)
+# --------------------------------------------------------------------------- #
+class LineItem(BaseModel):
+    """A single ordered product line."""
+
+    part_number: Optional[str] = Field(None, description="Catalog/part number, if present")
+    description: Optional[str] = Field(None, description="Free-text item description")
+    quantity: Optional[int] = Field(None, description="Ordered quantity as an integer")
+    unit_price: Optional[float] = Field(None, description="Price per unit, no currency symbol")
+
+
+class PurchaseOrder(BaseModel):
+    """The full extracted purchase order."""
+
+    customer_name: Optional[str] = None
+    po_number: Optional[str] = None
+    order_date: Optional[str] = None
+    delivery_date: Optional[str] = None
+    shipping_address: Optional[str] = None
+    line_items: List[LineItem] = Field(default_factory=list)
+
+
+EXTRACTION_SYSTEM = """You are an AI that extracts purchase-order data from documents.
+
+Extract the customer, PO number, order/delivery dates, shipping address, and every
+line item (part number, description, quantity, unit price).
 
 Rules:
-- If a field is not found, return null for that field.
-- If a part number is not found for a line item, set "part_number" to null and
-  still extract the "description".
-- quantity must be an integer, unit_price must be a number (no currency symbol).
-- Return ONLY the JSON. No explanation, no markdown fences.
+- If a field is not present in the document, return null for it.
+- If a line item has no part number, set part_number to null but still capture the
+  description.
+- quantity must be an integer; unit_price must be a plain number with no currency symbol.
 """
 
 
-def _client() -> OpenAI:
-    """Thin alias kept for backwards-compat; delegates to the shared client."""
-    return get_openai_client()
+# --------------------------------------------------------------------------- #
+# LangChain model
+# --------------------------------------------------------------------------- #
+def _structured_llm():
+    """A ChatOpenAI bound to the PurchaseOrder schema via structured output."""
+    llm = ChatOpenAI(model=MODEL, temperature=0, api_key=get_openai_api_key())
+    return llm.with_structured_output(PurchaseOrder)
 
 
+# --------------------------------------------------------------------------- #
+# Input helpers (unchanged behavior)
+# --------------------------------------------------------------------------- #
 def _read_pdf_bytes(pdf_file: Any) -> bytes:
     """Accept a path, bytes, or a file-like object (e.g. Streamlit upload)."""
     if isinstance(pdf_file, (bytes, bytearray)):
@@ -63,7 +83,6 @@ def _read_pdf_bytes(pdf_file: Any) -> bytes:
     if isinstance(pdf_file, str):
         with open(pdf_file, "rb") as fh:
             return fh.read()
-    # file-like (has .read); Streamlit UploadedFile also supports getvalue()
     if hasattr(pdf_file, "getvalue"):
         return pdf_file.getvalue()
     data = pdf_file.read()
@@ -89,137 +108,6 @@ def _render_first_page_png(pdf_bytes: bytes) -> bytes:
     return pix.tobytes("png")
 
 
-def _strip_fences(text: str) -> str:
-    """Remove ```json ... ``` fences if the model added them despite instructions."""
-    text = text.strip()
-    if text.startswith("```"):
-        text = text.split("\n", 1)[-1] if "\n" in text else text
-        text = text.rsplit("```", 1)[0]
-    return text.strip()
-
-
-def _call_openai_text(client: OpenAI, document_text: str) -> str:
-    resp = client.chat.completions.create(
-        model=MODEL,
-        temperature=0,
-        response_format={"type": "json_object"},
-        messages=[
-            {"role": "system", "content": EXTRACTION_PROMPT},
-            {"role": "user", "content": f"Document text:\n\n{document_text}"},
-        ],
-    )
-    return resp.choices[0].message.content or "{}"
-
-
-def _call_openai_vision(client: OpenAI, png_bytes: bytes) -> str:
-    b64 = base64.b64encode(png_bytes).decode("ascii")
-    resp = client.chat.completions.create(
-        model=MODEL,
-        temperature=0,
-        response_format={"type": "json_object"},
-        messages=[
-            {"role": "system", "content": EXTRACTION_PROMPT},
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": "Extract the purchase order from this image."},
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": f"data:image/png;base64,{b64}"},
-                    },
-                ],
-            },
-        ],
-    )
-    return resp.choices[0].message.content or "{}"
-
-
-def _normalize(order: dict[str, Any]) -> dict[str, Any]:
-    """Guarantee the expected shape so downstream code never KeyErrors."""
-    order.setdefault("customer_name", None)
-    order.setdefault("po_number", None)
-    order.setdefault("order_date", None)
-    order.setdefault("delivery_date", None)
-    order.setdefault("shipping_address", None)
-    items = order.get("line_items") or []
-    clean_items = []
-    for it in items:
-        clean_items.append(
-            {
-                "part_number": (it.get("part_number") or None),
-                "description": (it.get("description") or None),
-                "quantity": _to_int(it.get("quantity")),
-                "unit_price": _to_float(it.get("unit_price")),
-            }
-        )
-    order["line_items"] = clean_items
-    return order
-
-
-def _to_int(v: Any) -> int | None:
-    try:
-        return int(float(v))
-    except (TypeError, ValueError):
-        return None
-
-
-def _to_float(v: Any) -> float | None:
-    if v is None:
-        return None
-    if isinstance(v, str):
-        v = v.replace("$", "").replace(",", "").strip()
-    try:
-        return float(v)
-    except (TypeError, ValueError):
-        return None
-
-
-def extract_order(pdf_file: Any) -> dict[str, Any]:
-    """
-    Main entry point. Returns a normalized order dict:
-        {
-          customer_name, po_number, order_date, delivery_date,
-          shipping_address, line_items: [...], _source: "text"|"vision"
-        }
-    """
-    pdf_bytes = _read_pdf_bytes(pdf_file)
-    client = _client()
-
-    text = extract_text(pdf_bytes)
-    if text:
-        raw = _call_openai_text(client, text)
-        source = "pdf_text"
-    else:
-        png = _render_first_page_png(pdf_bytes)
-        raw = _call_openai_vision(client, png)
-        source = "pdf_scanned"
-
-    return _parse_and_normalize(raw, source)
-
-
-def _parse_and_normalize(raw: str, source: str) -> dict[str, Any]:
-    """Shared tail: parse the model's JSON, normalize shape, tag the source."""
-    try:
-        order = json.loads(_strip_fences(raw))
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"OpenAI did not return valid JSON: {exc}\n\nRaw:\n{raw}")
-    order = _normalize(order)
-    order["_source"] = source
-    return order
-
-
-def extract_order_from_text(document_text: str) -> dict[str, Any]:
-    """
-    Extract an order from raw text (e.g. a typed / forwarded email body),
-    skipping the PDF step. Same normalized shape as extract_order().
-    """
-    if not document_text or not document_text.strip():
-        raise ValueError("No text provided to extract from.")
-    client = _client()
-    raw = _call_openai_text(client, document_text.strip())
-    return _parse_and_normalize(raw, source="email_text")
-
-
 def _to_png(image_bytes: bytes) -> bytes:
     """Normalize any uploaded image (JPG/PNG/etc.) to PNG bytes for the API."""
     from PIL import Image
@@ -231,14 +119,79 @@ def _to_png(image_bytes: bytes) -> bytes:
     img.save(out, format="PNG")
     return out.getvalue()
 
+
+# --------------------------------------------------------------------------- #
+# Model invocation via LangChain
+# --------------------------------------------------------------------------- #
+def _invoke_text(document_text: str) -> PurchaseOrder:
+    messages = [
+        SystemMessage(content=EXTRACTION_SYSTEM),
+        HumanMessage(content=f"Document text:\n\n{document_text}"),
+    ]
+    return _structured_llm().invoke(messages)
+
+
+def _invoke_vision(png_bytes: bytes) -> PurchaseOrder:
+    b64 = base64.b64encode(png_bytes).decode("ascii")
+    messages = [
+        SystemMessage(content=EXTRACTION_SYSTEM),
+        HumanMessage(
+            content=[
+                {"type": "text", "text": "Extract the purchase order from this image."},
+                {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64}"}},
+            ]
+        ),
+    ]
+    return _structured_llm().invoke(messages)
+
+
+# --------------------------------------------------------------------------- #
+# Normalization — guarantee the dict shape downstream code depends on
+# --------------------------------------------------------------------------- #
+def _normalize(po: PurchaseOrder, source: str) -> dict[str, Any]:
+    order = {
+        "customer_name": po.customer_name or None,
+        "po_number": po.po_number or None,
+        "order_date": po.order_date or None,
+        "delivery_date": po.delivery_date or None,
+        "shipping_address": po.shipping_address or None,
+        "line_items": [
+            {
+                "part_number": it.part_number or None,
+                "description": it.description or None,
+                "quantity": it.quantity,
+                "unit_price": it.unit_price,
+            }
+            for it in po.line_items
+        ],
+        "_source": source,
+    }
+    return order
+
+
+# --------------------------------------------------------------------------- #
+# Public entry points (stable signatures)
+# --------------------------------------------------------------------------- #
+def extract_order(pdf_file: Any) -> dict[str, Any]:
+    """Extract from a PDF (text layer if present, else vision on page 1)."""
+    pdf_bytes = _read_pdf_bytes(pdf_file)
+    text = extract_text(pdf_bytes)
+    if text:
+        return _normalize(_invoke_text(text), "pdf_text")
+    png = _render_first_page_png(pdf_bytes)
+    return _normalize(_invoke_vision(png), "pdf_scanned")
+
+
+def extract_order_from_text(document_text: str) -> dict[str, Any]:
+    """Extract from raw text (e.g. a typed / forwarded email body)."""
+    if not document_text or not document_text.strip():
+        raise ValueError("No text provided to extract from.")
+    return _normalize(_invoke_text(document_text.strip()), "email_text")
+
+
 def extract_order_from_image(image_bytes: bytes) -> dict[str, Any]:
-    """
-    Extract an order from an image file (scanned photo or handwritten form)
-    using OpenAI vision. Same normalized shape as extract_order().
-    """
-    client = _client()
-    raw = _call_openai_vision(client, _to_png(image_bytes))
-    return _parse_and_normalize(raw, source="image")
+    """Extract from an image (scanned photo or handwritten form) via vision."""
+    return _normalize(_invoke_vision(_to_png(image_bytes)), "image")
 
 
 if __name__ == "__main__":

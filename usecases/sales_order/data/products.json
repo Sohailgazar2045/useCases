@@ -2,19 +2,16 @@
   {
     "part_number": "MED-1001",
     "description": "Surgical Gloves Box",
-    "unit_price": 45.00,
     "uom": "BOX"
   },
   {
     "part_number": "MED-1002",
     "description": "Sterile Bandages Pack",
-    "unit_price": 23.50,
     "uom": "PACK"
   },
   {
     "part_number": "MED-1003",
     "description": "Disposable Syringes Pack",
-    "unit_price": 18.00,
     "uom": "PACK"
   }
 ]

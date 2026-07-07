@@ -42,20 +42,61 @@ def _save_order(confirmation: dict[str, Any]) -> None:
         json.dump(orders, fh, indent=2, ensure_ascii=False)
 
 
-def create_order(match_result: dict[str, Any], order: dict[str, Any]) -> dict[str, Any]:
+def find_by_po(po_number: str | None) -> dict[str, Any] | None:
+    """Return a previously created order with this PO number, if any."""
+    if not po_number:
+        return None
+    for existing in load_orders():
+        if existing.get("po_number") == po_number:
+            return existing
+    return None
+
+
+def create_order(
+    match_result: dict[str, Any],
+    order: dict[str, Any],
+    include_line_indexes: list[int] | None = None,
+) -> dict[str, Any]:
     """
     Receives the approved match result + original extracted order, generates a
     mock D365 confirmation, PERSISTS it to orders.json, and returns it.
+
+    Idempotency: if an order with the same PO number already exists it is NOT
+    duplicated — the existing confirmation is returned with status "duplicate".
+
+    Partial orders: pass ``include_line_indexes`` (0-based) to create an order
+    for only the selected lines (e.g. the catalog-matched ones), holding the rest.
     """
+    po_number = order.get("po_number")
+
+    # --- Idempotency guard: don't create the same PO twice. ---------------- #
+    prior = find_by_po(po_number)
+    if prior is not None:
+        return {
+            **prior,
+            "status": "duplicate",
+            "message": (
+                f"Duplicate PO — order {prior.get('order_id')} already exists for "
+                f"PO {po_number}. No new order created."
+            ),
+        }
+
     customer = match_result.get("customer", {})
     matched = customer.get("matched") or {}
 
     existing = load_orders()
     order_id = _next_order_id(existing)
 
+    all_lines = match_result.get("line_items", [])
+    if include_line_indexes is not None:
+        selected = [(i, all_lines[i]) for i in include_line_indexes if 0 <= i < len(all_lines)]
+    else:
+        selected = list(enumerate(all_lines))
+
     # Flatten the approved line items so the saved record is self-contained.
     saved_lines = []
-    for ln in match_result.get("line_items", []):
+    total = 0.0
+    for _, ln in selected:
         item = ln.get("item", {})
         prod = ln.get("product", {}).get("matched") or {}
         saved_lines.append(
@@ -67,19 +108,29 @@ def create_order(match_result: dict[str, Any], order: dict[str, Any]) -> dict[st
                 "line_total": ln.get("line_total"),
             }
         )
+        total += ln.get("line_total") or 0.0
+
+    partial = include_line_indexes is not None and len(saved_lines) < len(all_lines)
 
     confirmation = {
         "status": "success",
         "order_id": order_id,
         "customer_id": matched.get("id", "UNMAPPED"),
         "customer_name": matched.get("name") or order.get("customer_name"),
-        "po_number": order.get("po_number"),
+        "po_number": po_number,
         "delivery_date": order.get("delivery_date"),
         "line_count": len(saved_lines),
         "line_items": saved_lines,
-        "total_amount": match_result.get("total_amount", 0.0),
+        "total_amount": round(total, 2),
+        "partial": partial,
+        "held_line_count": len(all_lines) - len(saved_lines),
         "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "message": "Sales order created successfully in D365 F&O",
+        "message": (
+            "Partial sales order created in D365 F&O "
+            f"({len(all_lines) - len(saved_lines)} line(s) held)"
+            if partial
+            else "Sales order created successfully in D365 F&O"
+        ),
     }
 
     _save_order(confirmation)

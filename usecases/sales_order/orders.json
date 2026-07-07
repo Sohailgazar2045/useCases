@@ -31,49 +31,9 @@
       }
     ],
     "total_amount": 1272.0,
-    "created_at": "2026-07-03 15:05:44",
-    "message": "Sales order created successfully in D365 F&O"
-  },
-  {
-    "status": "success",
-    "order_id": "SO-2026-00125",
-    "customer_id": "CUST003",
-    "customer_name": "Delta Supplies Ltd",
-    "po_number": "PO-DELTA-2026",
-    "delivery_date": "30 July 2026",
-    "line_count": 4,
-    "line_items": [
-      {
-        "part_number": "MED-1001",
-        "description": "Surgical Gloves Box — Latex Free Medium",
-        "quantity": 100,
-        "unit_price": 40.0,
-        "line_total": 4000.0
-      },
-      {
-        "part_number": "MED-9999",
-        "description": "Advanced Wound Care Kit — Ref: DLT-WCK-2026 (New product — see attached spec sheet)",
-        "quantity": 10,
-        "unit_price": 99.0,
-        "line_total": 990.0
-      },
-      {
-        "part_number": "MED-1003",
-        "description": "Disposable Syringes 5ml Sterile Single Use",
-        "quantity": 500,
-        "unit_price": 18.0,
-        "line_total": 9000.0
-      },
-      {
-        "part_number": null,
-        "description": "Medical grade gloves — nitrile preferred (if not available contact buyer)",
-        "quantity": 50,
-        "unit_price": null,
-        "line_total": 0
-      }
-    ],
-    "total_amount": 13990.0,
-    "created_at": "2026-07-03 16:04:39",
+    "partial": false,
+    "held_line_count": 0,
+    "created_at": "2026-07-06 20:15:30",
     "message": "Sales order created successfully in D365 F&O"
   }
 ]

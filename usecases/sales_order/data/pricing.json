@@ -1,0 +1,17 @@
+[
+  {
+    "part_number": "MED-1001",
+    "unit_price": 45.00,
+    "currency": "USD"
+  },
+  {
+    "part_number": "MED-1002",
+    "unit_price": 23.50,
+    "currency": "USD"
+  },
+  {
+    "part_number": "MED-1003",
+    "unit_price": 18.00,
+    "currency": "USD"
+  }
+]

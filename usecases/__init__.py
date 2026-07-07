@@ -6,7 +6,7 @@ USE_CASES = [
         "number": 1,
         "title": "Automate Sales Order Entry",
         "icon": "📄",
-        "tagline": "Extract POs from emails/documents → match master data → mock D365 order.",
+        "tagline": "Extract POs from emails/documents → match master data → confidence + AI recommendation → mock D365 order.",
         "status": "live",
     },
     {
