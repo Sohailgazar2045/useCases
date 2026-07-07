@@ -1,0 +1,14 @@
+PAYMENT NOTIFICATION — WIRE TRANSFER
+====================================
+
+Payer:        Fabrikam Inc  (Account CUST003)
+Value Date:   2026-07-10
+Amount:       USD 64,000.00
+Ref:          Wire settlement for two open invoices
+
+Applied as follows:
+  INV-3002 ....... billed 35,000.00 ... paid 34,000.00
+       short 1,000.00 — price billed higher than agreed PO price (pricing dispute)
+  INV-3003 ....... billed 30,000.00 ... paid 30,000.00  (paid in full)
+
+Total wired: USD 64,000.00

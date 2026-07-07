@@ -12,10 +12,10 @@ USE_CASES = [
     {
         "key": "usecase2",
         "number": 2,
-        "title": "Use Case 2",
-        "icon": "🧩",
-        "tagline": "Placeholder — to be defined.",
-        "status": "planned",
+        "title": "Automate Cash Application",
+        "icon": "💵",
+        "tagline": "Match incoming payments/remittances → open invoices → auto-post or human review.",
+        "status": "live",
     },
     {
         "key": "usecase3",

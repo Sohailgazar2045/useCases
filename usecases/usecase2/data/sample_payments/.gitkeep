@@ -1,0 +1,7 @@
+Synthetic payment/remittance documents go here (one per demo path):
+  clean_exact.txt        → auto-post
+  short_pay.txt          → human review (partial)
+  overpay.txt            → human review (credit)
+  no_reference.txt       → allocation search → human confirm
+  multi_invoice.txt      → human confirm
+  exception.txt          → no match / exception

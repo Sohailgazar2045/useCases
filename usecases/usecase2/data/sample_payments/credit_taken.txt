@@ -1,0 +1,21 @@
+REMITTANCE ADVICE
+=================
+
+From:        Contoso Ltd
+Customer ID: CUST002
+Date:        2026-07-04
+
+Payment Method: Card
+Currency:       USD
+Total Payment:  $600.00
+
+Invoice Detail
+--------------
+  Invoice INV-2001    Billed: $750.00
+                      Paid:   $600.00
+                      Less:   $150.00
+
+  Deduction: $150.00 - applying existing credit memo CM-2025-0042
+             issued for a prior overbilling.
+
+Thank you.

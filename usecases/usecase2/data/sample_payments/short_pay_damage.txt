@@ -1,0 +1,21 @@
+REMITTANCE ADVICE
+=================
+
+From:        Northwind Traders
+Customer ID: CUST001
+Date:        2026-07-02
+
+Payment Method: Lockbox (Check #40912)
+Currency:       USD
+Total Payment:  $3,000.00
+
+Invoice Detail
+--------------
+  Invoice INV-1002    Billed: $3,200.00
+                      Paid:   $3,000.00
+                      Short:  $  200.00
+
+  Deduction: $200.00 - 2 units on this order arrived DAMAGED,
+             returning for credit. Balance withheld pending credit.
+
+Thank you.

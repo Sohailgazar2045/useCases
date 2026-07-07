@@ -1,0 +1,18 @@
+REMITTANCE ADVICE
+=================
+
+From:        Northwind Traders
+Customer ID: CUST001
+Date:        2026-07-08
+
+Payment Method: Lockbox (Check #41055)
+Currency:       USD
+Total Payment:  $500.00
+
+Invoice Detail
+--------------
+  Invoice INV-8888 ................ $500.00
+
+Note: Customer references an invoice number not found in our open items.
+
+Thank you.

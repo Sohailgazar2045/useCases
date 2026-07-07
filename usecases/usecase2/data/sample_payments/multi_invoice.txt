@@ -1,0 +1,19 @@
+REMITTANCE ADVICE
+=================
+
+From:        Fabrikam Inc
+Customer ID: CUST003
+Date:        2026-07-06
+
+Payment Method: Wire Transfer
+Currency:       USD
+Total Payment:  $32,000.00
+
+Invoices Paid
+-------------
+  Invoice INV-3004 ................ $20,000.00
+  Invoice INV-3005 ................ $12,000.00
+
+Total Applied: $32,000.00
+
+Thank you.

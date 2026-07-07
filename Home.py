@@ -27,7 +27,7 @@ _PAGE_PATHS = {
     "usecase3": "pages/3_Use_Case_3.py",
 }
 
-_STATUS_BADGE = {"live": "🟢 Live", "planned": "⚪ Planned"}
+_STATUS_BADGE = {"live": "🟢 Live", "in_progress": "🟡 In progress", "planned": "⚪ Planned"}
 
 cols = st.columns(len(USE_CASES))
 for col, uc in zip(cols, USE_CASES):

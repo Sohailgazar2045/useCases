@@ -3,3 +3,7 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+*.db
+usecases/usecase2/data/uploads/
+plan/
+CLAUDE.md

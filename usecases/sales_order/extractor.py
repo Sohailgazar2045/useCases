@@ -231,7 +231,6 @@ def _to_png(image_bytes: bytes) -> bytes:
     img.save(out, format="PNG")
     return out.getvalue()
 
-
 def extract_order_from_image(image_bytes: bytes) -> dict[str, Any]:
     """
     Extract an order from an image file (scanned photo or handwritten form)

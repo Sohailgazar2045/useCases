@@ -1,0 +1,15 @@
+REMITTANCE ADVICE
+=================
+
+From:        Contoso Ltd
+Customer ID: CUST002
+Date:        2026-07-05
+
+Payment Method: Wire Transfer
+Currency:       USD
+Total Payment:  $1,000.00
+
+Note: Payment on account. No invoice number provided by customer.
+      Please apply to the appropriate open item.
+
+Thank you.

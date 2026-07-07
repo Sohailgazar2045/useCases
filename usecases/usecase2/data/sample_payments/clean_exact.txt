@@ -1,0 +1,18 @@
+REMITTANCE ADVICE
+=================
+
+From:        Northwind Traders
+Customer ID: CUST001
+Date:        2026-07-01
+
+Payment Method: ACH Transfer
+Currency:       USD
+Total Payment:  $5,000.00
+
+Invoices Paid
+-------------
+  Invoice INV-1001 ................ $5,000.00
+
+Total Applied: $5,000.00
+
+Thank you for your business.

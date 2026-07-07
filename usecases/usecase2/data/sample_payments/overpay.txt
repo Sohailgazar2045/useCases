@@ -1,0 +1,20 @@
+REMITTANCE ADVICE
+=================
+
+From:        Contoso Ltd
+Customer ID: CUST002
+Date:        2026-07-07
+
+Payment Method: Card
+Currency:       USD
+Total Payment:  $900.00
+
+Invoice Detail
+--------------
+  Invoice INV-2001    Billed: $750.00
+                      Paid:   $900.00
+                      Over:   $150.00
+
+  Note: Overpaid by $150.00 - please place on account.
+
+Thank you.

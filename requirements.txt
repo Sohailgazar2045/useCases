@@ -6,3 +6,7 @@ rapidfuzz>=3.9.0
 PyMuPDF>=1.24.0
 Pillow>=10.0.0
 reportlab>=4.2.0
+# Use Case 2 — Cash Application (OpenAI + LangGraph)
+langgraph>=0.2.0
+langgraph-checkpoint-sqlite>=2.0.0
+pytest>=8.0.0
