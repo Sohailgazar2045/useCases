@@ -251,10 +251,12 @@ def render() -> None:
         "3-way match supplier invoices against POs and goods receipts → auto-post or route to review."
     )
 
-    # Make sure the backend is up (idempotent — Home.py starts it too).
+    # Make sure the backend is up (idempotent — Home.py starts it too). A remote
+    # API (UC3_API_BASE_URL set to a Render/etc. URL) may be waking from idle, so
+    # allow enough time for a free-tier cold start on the first request.
     if not api_is_up():
-        with st.spinner("Starting the AP Matching API…"):
-            ensure_api_running(timeout=20)
+        with st.spinner("Waking the AP Matching API… (first request after idle can take ~30–50s)"):
+            ensure_api_running(timeout=75)
     if not api_is_up():
         st.error(
             f"The UC3 API is not reachable at {UC3_API_BASE_URL}. "

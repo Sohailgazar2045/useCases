@@ -31,6 +31,7 @@ from ..config import (
     FLAGGED_INVOICES_PATH,
     POSTED_INVOICES_PATH,
     RECEIVED_NOT_INVOICED_THRESHOLD_DAYS,
+    UC3_CORS_ORIGINS,
 )
 from ..store import append_json, read_json, write_json
 from .schemas import FlagInvoiceRequest, PostInvoiceRequest
@@ -42,10 +43,14 @@ app = FastAPI(
 )
 
 # CORS: the Streamlit UI (and any browser client) calls these routes cross-origin.
+# Origins are env-driven (UC3_CORS_ORIGINS) so a public deploy can be locked to
+# the Streamlit domain. Credentials can't be combined with the "*" wildcard, so
+# only enable them when explicit origins are configured.
+_allow_credentials = UC3_CORS_ORIGINS != ["*"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=UC3_CORS_ORIGINS,
+    allow_credentials=_allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )

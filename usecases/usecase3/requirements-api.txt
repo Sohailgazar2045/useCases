@@ -1,0 +1,7 @@
+# Minimal deps to run ONLY the UC3 AP-matching API as a standalone service
+# (e.g. on Render/Railway/Fly). The endpoints import no Streamlit, OpenAI, or
+# LangChain — just FastAPI + a JSON store — so the image stays small and avoids
+# the heavier suite dependencies. Pydantic ships with FastAPI.
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+python-dotenv>=1.0.0

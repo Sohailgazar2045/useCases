@@ -1,0 +1,25 @@
+# Render blueprint — deploys the UC3 AP-matching API as a standalone public
+# service. Deploy: push to GitHub, then on render.com → New → Blueprint → pick
+# this repo. Render gives it a public URL like https://uc3-ap-invoice-api.onrender.com
+# with Swagger docs at /docs.
+#
+# After it's live, set this in your Streamlit Cloud Secrets so the UI calls it:
+#   UC3_API_BASE_URL = "https://<your-render-service>.onrender.com"
+#
+# Note: the free plan's filesystem is EPHEMERAL — flagged/posted invoices reset
+# on redeploy/restart. Fine for a demo; use a real DB or a persistent disk to keep them.
+services:
+  - type: web
+    name: uc3-ap-invoice-api
+    runtime: python
+    plan: free
+    # Run from the repo root so `usecases.usecase3.api.main` imports cleanly.
+    buildCommand: pip install -r usecases/usecase3/requirements-api.txt
+    startCommand: uvicorn usecases.usecase3.api.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      # Pin a supported Python (avoids the 3.14 issues seen locally).
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      # Lock CORS to your Streamlit app once known; "*" is fine to start.
+      - key: UC3_CORS_ORIGINS
+        value: "*"

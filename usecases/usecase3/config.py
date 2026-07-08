@@ -19,8 +19,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Base URL of the UC3 FastAPI backend. Its own port (UC1 uses 8000) so both can
-# run side by side from a single `streamlit run Home.py`. Override via env.
+# run side by side from a single `streamlit run Home.py`. Override via env — set
+# this to the public API URL when the backend is deployed separately (e.g. Render).
 UC3_API_BASE_URL = os.getenv("UC3_API_BASE_URL", "http://localhost:8001")
+
+# Allowed CORS origins for the API. Comma-separated list, or "*" for any. When
+# the API is public, set this to your Streamlit domain to lock it down, e.g.
+# UC3_CORS_ORIGINS="https://your-app.streamlit.app".
+UC3_CORS_ORIGINS = [o.strip() for o in os.getenv("UC3_CORS_ORIGINS", "*").split(",") if o.strip()]
 
 # ── Paths ────────────────────────────────────────────────────────────────
 # Anchored to this file (not the process CWD) so the paths resolve correctly no

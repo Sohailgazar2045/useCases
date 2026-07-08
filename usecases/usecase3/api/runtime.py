@@ -39,7 +39,8 @@ def _host_port() -> tuple[str, int]:
 
 def api_is_up() -> bool:
     try:
-        return requests.get(f"{UC3_API_BASE_URL}/health", timeout=1).status_code == 200
+        # 4s tolerates a remote host that's mid-cold-start (e.g. Render free tier).
+        return requests.get(f"{UC3_API_BASE_URL}/health", timeout=4).status_code == 200
     except requests.RequestException:
         return False
 
@@ -57,8 +58,9 @@ def _stop() -> None:
 def ensure_api_running(timeout: float = 30.0) -> bool:
     """Return True once the API answers /health, starting it if needed.
 
-    Only auto-starts when the API URL points at this machine; a remote
-    UC3_API_BASE_URL is left untouched (we just report reachability).
+    Local URL: spawn uvicorn if it isn't already up. Remote URL (e.g. a Render
+    deploy set via UC3_API_BASE_URL): we can't launch it, but it may be waking
+    from a free-tier idle sleep — so poll until it answers or the timeout lapses.
     """
     global _proc
 
@@ -67,7 +69,14 @@ def ensure_api_running(timeout: float = 30.0) -> bool:
 
     host, port = _host_port()
     if host not in _LOCAL_HOSTS:
-        return False  # remote API we can't (and shouldn't) launch
+        # Remote API — can't start it, but wait out a cold start (Render/Railway
+        # free tiers sleep when idle and take ~30–50s to wake on first request).
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if api_is_up():
+                return True
+            time.sleep(2.0)
+        return api_is_up()
 
     # Spawn uvicorn once; reuse the handle across reruns.
     if _proc is None or _proc.poll() is not None:

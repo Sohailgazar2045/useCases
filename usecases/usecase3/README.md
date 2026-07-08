@@ -114,6 +114,70 @@ Goods received ≥ 30 days ago whose PO has no posted invoice (accrual risk).
 Data lives in `usecases/usecase3/data/`; paths are anchored to the package (not
 the process CWD), so it works no matter where uvicorn/Streamlit is launched from.
 
+## Running on Streamlit Community Cloud
+The auto-start design works as-is when deployed (e.g.
+`https://<app>.streamlit.app`) — no architecture change needed — because the
+whole app runs in **one container**:
+
+```
+Cloud container (public HTTPS = the Streamlit UI only)
+├─ streamlit process ── the ONLY thing exposed to the internet
+│    └─ requests → http://localhost:8001/uc3/...   (internal, same box)
+├─ uvicorn :8000  (UC1)   ← localhost-only, not routed publicly
+└─ uvicorn :8001  (UC3)   ← localhost-only, not routed publicly
+```
+
+`Home.py` spawns both uvicorn subprocesses inside the container; the UI reaches
+them over `localhost`. What the public URL serves is the Streamlit UI — the APIs
+are private implementation details.
+
+Deployment checklist:
+- **Don't override `UC3_API_BASE_URL`** in Cloud secrets — keep the
+  `http://localhost:8001` default. Pointing it at the public HTTPS URL breaks the
+  internal call.
+- **The API `/docs` are not public.** Only the Streamlit port is routed out;
+  `:8001/docs` is reachable locally but not from the deployed URL.
+- **Secrets, not `.env`.** Cloud has no `.env`; add `OPENAI_API_KEY` (used by
+  UC1/UC2 — UC3 needs no key) under **Manage app → Settings → Secrets**.
+  `shared/config.py` already falls back to `st.secrets`.
+- **Memory (~1 GB).** Both APIs start eagerly at Home load, which is the heaviest
+  moment (Streamlit + LangChain + 2× uvicorn). If the app hits the resource
+  limit, switch to lazy start — drop `_start_backends()` from `Home.py`; each
+  `ui.py` already calls `ensure_api_running()` on open, so APIs then spin up
+  per-page (a ~2–3s first-visit spinner) instead of all at once.
+
+> On Streamlit Cloud the API is internal-only — the public URL serves the UI, and
+> `:8001/docs` is **not** reachable from the internet (it's only bound to
+> localhost inside the container). To get a public API + Swagger page, deploy the
+> backend separately (below).
+
+## Deploying the API as a public service
+The endpoints import no Streamlit/OpenAI/LangChain — just FastAPI + a JSON store —
+so the backend can run standalone anywhere that hosts `uvicorn` (Render, Railway,
+Fly.io, Hugging Face Spaces). A **Render** blueprint ([`render.yaml`](../../render.yaml))
+and a slim [`requirements-api.txt`](requirements-api.txt) are included.
+
+1. **Deploy on Render.** Push to GitHub → [render.com](https://render.com) → New →
+   **Blueprint** → pick this repo. It runs:
+   ```
+   pip install -r usecases/usecase3/requirements-api.txt
+   uvicorn usecases.usecase3.api.main:app --host 0.0.0.0 --port $PORT
+   ```
+   You get a public URL like `https://uc3-ap-invoice-api.onrender.com`, with docs
+   at **`/docs`** and the endpoints at `/uc3/...`.
+2. **Point the UI at it.** In Streamlit Cloud **Secrets**, set:
+   ```toml
+   UC3_API_BASE_URL = "https://uc3-ap-invoice-api.onrender.com"
+   ```
+   The UI now calls the public API instead of localhost. (The runtime auto-detects
+   the non-local host and does **not** try to spawn a local uvicorn.)
+3. **Lock CORS.** On the API host, set `UC3_CORS_ORIGINS` to your Streamlit domain
+   (e.g. `https://<app>.streamlit.app`) instead of the `*` default.
+
+> ⚠️ Free-tier filesystems are **ephemeral** — `flagged_invoices.json` /
+> `posted_invoices.json` reset on redeploy/restart. Fine for a demo; back them
+> with a database or a persistent disk to retain history.
+
 ## Notes
 - Self-contained and independent of UC1/UC2 — nothing here imports or modifies them.
 - `Home.py` starts this API (`:8001`) alongside UC1's (`:8000`) on launch, so a
