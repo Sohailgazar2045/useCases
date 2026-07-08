@@ -4,6 +4,10 @@ __pycache__/
 .venv/
 venv/
 *.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
 usecases/usecase2/data/uploads/
 plan/
 CLAUDE.md
