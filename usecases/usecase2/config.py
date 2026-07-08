@@ -10,12 +10,19 @@ from __future__ import annotations
 
 from pathlib import Path
 
-# Reuse the project-wide OpenAI client + model (loads .env once).
-from shared.config import OPENAI_MODEL, get_openai_client
+from openai import OpenAI
 
-# Re-export so UC2 nodes can import everything LLM-related from here.
+# Same key path as Use Case 1: shared.config.get_openai_api_key() reads
+# OPENAI_API_KEY from the environment (Streamlit Cloud secrets are exposed as
+# env vars), so both use cases resolve the key identically.
+from shared.config import OPENAI_MODEL, get_openai_api_key
+
 LLM_MODEL = OPENAI_MODEL
-get_llm_client = get_openai_client
+
+
+def get_llm_client() -> OpenAI:
+    """OpenAI client built with the shared key — identical to UC1's key path."""
+    return OpenAI(api_key=get_openai_api_key())
 
 # ── Paths ────────────────────────────────────────────────────────────────
 UC2_DIR = Path(__file__).resolve().parent

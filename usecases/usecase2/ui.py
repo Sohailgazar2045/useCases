@@ -90,8 +90,12 @@ def _save_upload(uploaded) -> str:
 def _process(path: str) -> None:
     st.session_state["counter"] = st.session_state.get("counter", 0) + 1
     tid = f"{os.path.basename(path)}-{st.session_state['counter']}"
-    with st.spinner("AI reading the document and matching it against open invoices…"):
-        res = svc_start(path, tid)
+    try:
+        with st.spinner("AI reading the document and matching it against open invoices…"):
+            res = svc_start(path, tid)
+    except Exception as e:  # AI/graph failed — surface it, don't show "no data"
+        _error_dialog(f"{type(e).__name__}: {e}")
+        return
     st.session_state["thread_id"] = tid
     st.session_state["doc"] = path
     if res["status"] == "auto_posted":
@@ -104,10 +108,25 @@ def _process(path: str) -> None:
 
 
 def _do_resume(decision: dict) -> None:
-    out = svc_resume(st.session_state["thread_id"], decision)
+    try:
+        out = svc_resume(st.session_state["thread_id"], decision)
+    except Exception as e:
+        _error_dialog(f"{type(e).__name__}: {e}")
+        return
     st.session_state["result"] = {"auto": False, "decision": decision, "final": out["final"]}
     st.session_state["phase"] = "done"
     st.rerun()
+
+
+# ── error modal — shown when the AI / graph fails ────────────────────────
+@st.dialog("⚠️ Something went wrong")
+def _error_dialog(message: str) -> None:
+    st.error("The system hit an error while processing this payment and could not finish.")
+    st.caption("What happened (share this with support if it persists):")
+    st.code(message or "Unknown error")
+    st.caption("Close this box (× top-right) and try again, or reset the demo data.")
+    if st.button("Close", width="stretch"):
+        st.rerun()
 
 
 # ── the modal approval dialog — JUST the decision (approve / reject) ─────
@@ -333,7 +352,11 @@ def render() -> None:
     st.title("💵 Cash Application — Review Queue")
     st.caption("Match incoming payments to open invoices. Clean matches auto-post; "
                "the long tail pauses for human approval — the AI recommends, a person decides.")
-    _ensure_seeded()
+    try:
+        _ensure_seeded()
+    except Exception as e:  # e.g. read-only filesystem in a deployment
+        _error_dialog(f"Could not initialize the demo database: {type(e).__name__}: {e}")
+        return
     st.session_state.setdefault("phase", "idle")
 
     _sidebar()
