@@ -3,18 +3,30 @@
     "receipt_id": "REC-2026-001",
     "po_number": "PO-2026-001",
     "vendor": "MedSupply Corp",
-    "received_date": "2026-06-22"
+    "received_date": "2026-06-22",
+    "line_items": [
+      {"part_number": "MED-1001", "qty_received": 10},
+      {"part_number": "MED-1002", "qty_received": 5},
+      {"part_number": "MED-1003", "qty_received": 20}
+    ]
   },
   {
     "receipt_id": "REC-2026-002",
     "po_number": "PO-2026-002",
     "vendor": "PharmaCo Ltd",
-    "received_date": "2026-06-28"
+    "received_date": "2026-06-28",
+    "line_items": [
+      {"part_number": "PHR-2001", "qty_received": 50},
+      {"part_number": "PHR-2002", "qty_received": 100}
+    ]
   },
   {
     "receipt_id": "REC-2026-003",
     "po_number": "PO-2026-003",
     "vendor": "SurgTech Inc",
-    "received_date": "2026-06-01"
+    "received_date": "2026-06-01",
+    "line_items": [
+      {"part_number": "SRG-3001", "qty_received": 25}
+    ]
   }
 ]

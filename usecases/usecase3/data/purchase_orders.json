@@ -1,0 +1,26 @@
+[
+  {
+    "po_number": "PO-2026-001",
+    "vendor": "MedSupply Corp",
+    "line_items": [
+      {"part_number": "MED-1001", "description": "Surgical Gloves Box", "quantity": 10, "unit_price": 45.00},
+      {"part_number": "MED-1002", "description": "Sterile Bandages Pack", "quantity": 5, "unit_price": 23.50},
+      {"part_number": "MED-1003", "description": "Disposable Syringes Pack", "quantity": 20, "unit_price": 18.00}
+    ]
+  },
+  {
+    "po_number": "PO-2026-002",
+    "vendor": "PharmaCo Ltd",
+    "line_items": [
+      {"part_number": "PHR-2001", "description": "Antibiotics Box 500mg", "quantity": 50, "unit_price": 12.00},
+      {"part_number": "PHR-2002", "description": "Saline Solution 1L", "quantity": 100, "unit_price": 5.50}
+    ]
+  },
+  {
+    "po_number": "PO-2026-003",
+    "vendor": "SurgTech Inc",
+    "line_items": [
+      {"part_number": "SRG-3001", "description": "Scalpel Blades Pack", "quantity": 25, "unit_price": 28.00}
+    ]
+  }
+]

@@ -9,5 +9,60 @@
     "approved_by": "System",
     "payment_ref": "PAY-2026-00001",
     "posted_at": "2026-07-09 19:49:59"
+  },
+  {
+    "invoice_number": "INV-2026-001",
+    "vendor": "MedSupply Corp",
+    "po_number": "PO-2026-001",
+    "invoice_amount": 1001.7,
+    "match_result": "VARIANCE_FOUND",
+    "status": "Posted",
+    "approved_by": "demo.user",
+    "payment_ref": "PAY-2026-00002",
+    "posted_at": "2026-07-09 20:50:15"
+  },
+  {
+    "invoice_number": "INV-2026-001",
+    "vendor": "MedSupply Corp",
+    "po_number": "PO-2026-001",
+    "invoice_amount": 1001.7,
+    "match_result": "PERFECT_MATCH",
+    "status": "Auto Approved",
+    "approved_by": "System",
+    "payment_ref": "PAY-2026-00003",
+    "posted_at": "2026-07-09 20:57:18"
+  },
+  {
+    "invoice_number": "INV-2026-001",
+    "vendor": "MedSupply Corp",
+    "po_number": "PO-2026-001",
+    "invoice_amount": 1001.7,
+    "match_result": "PERFECT_MATCH",
+    "status": "Auto Approved",
+    "approved_by": "System",
+    "payment_ref": "PAY-2026-00004",
+    "posted_at": "2026-07-09 20:59:34"
+  },
+  {
+    "invoice_number": "INV-2026-003",
+    "vendor": "MedSupply Corp",
+    "po_number": "PO-2026-QTY",
+    "invoice_amount": 1077.84,
+    "match_result": "VARIANCE_FOUND",
+    "status": "Posted",
+    "approved_by": "demo.user",
+    "payment_ref": "PAY-2026-00005",
+    "posted_at": "2026-07-09 21:02:39"
+  },
+  {
+    "invoice_number": "INV-2026-004",
+    "vendor": "MedSupply Corp",
+    "po_number": "PO-2026-PARTIAL",
+    "invoice_amount": 612.9,
+    "match_result": "VARIANCE_FOUND",
+    "status": "Posted",
+    "approved_by": "demo.user",
+    "payment_ref": "PAY-2026-00006",
+    "posted_at": "2026-07-09 21:02:41"
   }
 ]

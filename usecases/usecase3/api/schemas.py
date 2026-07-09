@@ -25,6 +25,26 @@ class FlagInvoiceRequest(BaseModel):
     approved_by: Optional[str] = "System"
 
 
+class MatchInvoiceLineItem(BaseModel):
+    """One invoice line, in the shape ``matcher.match_invoice`` expects."""
+
+    part_number: Optional[str] = None
+    description: Optional[str] = None
+    quantity: Optional[float] = None
+    unit_price: Optional[float] = None
+
+
+class MatchInvoiceRequest(BaseModel):
+    """An extracted invoice to run through the 3-way match."""
+
+    vendor_name: str
+    invoice_number: str
+    po_number: str
+    invoice_date: Optional[str] = None
+    line_items: list[MatchInvoiceLineItem] = Field(default_factory=list)
+    total_amount: Optional[float] = None
+
+
 class ExtractTextBase64Request(BaseModel):
     """Extract text from a base64-encoded file (JSON-in, avoids multipart)."""
 

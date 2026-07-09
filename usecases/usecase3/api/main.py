@@ -11,6 +11,7 @@ Endpoints
 ---------
 GET  /health                liveness probe
 POST /uc3/flag-invoice      queue an invoice with variances for human review
+POST /uc3/match-invoice     3-way match one invoice (invoice ↔ PO ↔ receipt)
 GET  /uc3/flagged-invoices  list the review queue
 POST /uc3/post-invoice      approve + post an invoice, mint a payment reference
 GET  /uc3/check-alerts      goods received but not yet invoiced (accrual risk)
@@ -37,13 +38,17 @@ from ..config import (
     ALERTS_PATH,
     FLAGGED_INVOICES_PATH,
     POSTED_INVOICES_PATH,
+    PURCHASE_ORDERS_PATH,
+    RECEIPTS_PATH,
     RECEIVED_NOT_INVOICED_THRESHOLD_DAYS,
     UC3_CORS_ORIGINS,
 )
+from ..matcher import match_invoice
 from ..store import append_json, read_json, write_json
 from .schemas import (
     ExtractTextBase64Request,
     FlagInvoiceRequest,
+    MatchInvoiceRequest,
     PostInvoiceRequest,
     SaveAlertRequest,
 )
@@ -76,6 +81,41 @@ def _now() -> str:
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.post("/uc3/match-invoice")
+def match_invoice_endpoint(req: MatchInvoiceRequest) -> dict:
+    """
+    Run the 3-way match for one extracted invoice against the PO master and the
+    goods-receipt ledger, and return the full match verdict.
+
+    Reads ``purchase_orders.json`` and ``receipts.json`` from the data folder and
+    delegates the comparison to ``matcher.match_invoice`` (pure Python, no LLM).
+    """
+    try:
+        purchase_orders = read_json(PURCHASE_ORDERS_PATH, default=[])
+        receipts = read_json(RECEIPTS_PATH, default=[])
+
+        # Shape the invoice exactly as match_invoice expects: line_items carry
+        # part_number / description / quantity / unit_price.
+        invoice = {
+            "invoice_number": req.invoice_number,
+            "vendor": req.vendor_name,
+            "po_number": req.po_number,
+            "invoice_date": req.invoice_date,
+            "total_amount": req.total_amount,
+            "line_items": [li.model_dump() for li in req.line_items],
+        }
+
+        result = match_invoice(invoice, purchase_orders, receipts)
+        return {
+            "match_result": result["match_result"],
+            "auto_approve": result["auto_approve"],
+            "flags": result["flags"],
+            "line_results": result["line_results"],
+        }
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(500, f"Failed to match invoice: {exc}") from exc
 
 
 @app.post("/uc3/flag-invoice")

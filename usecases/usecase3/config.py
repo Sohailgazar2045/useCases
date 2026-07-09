@@ -35,6 +35,7 @@ UC3_CORS_ORIGINS = [o.strip() for o in os.getenv("UC3_CORS_ORIGINS", "*").split(
 UC3_DIR = Path(__file__).resolve().parent
 DATA_DIR = UC3_DIR / "data"
 
+PURCHASE_ORDERS_PATH = DATA_DIR / "purchase_orders.json"     # PO master (3-way match)
 FLAGGED_INVOICES_PATH = DATA_DIR / "flagged_invoices.json"   # exceptions awaiting review
 POSTED_INVOICES_PATH = DATA_DIR / "posted_invoices.json"     # approved + paid (mock)
 RECEIPTS_PATH = DATA_DIR / "receipts.json"                   # goods receipts (mock)
