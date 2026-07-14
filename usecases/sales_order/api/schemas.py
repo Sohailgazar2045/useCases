@@ -21,6 +21,12 @@ class ProcessResponse(BaseModel):
     confidence: dict[str, Any]
 
 
+class RematchRequest(BaseModel):
+    """Re-run matching + confidence on a human-corrected order (no re-extraction)."""
+
+    order: dict[str, Any] = Field(..., description="The corrected order dict")
+
+
 class CreateOrderRequest(BaseModel):
     """Approve an order (optionally only some lines) → create in mock D365."""
 

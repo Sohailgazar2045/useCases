@@ -29,7 +29,7 @@ from ..extractor import (
 )
 from ..matcher import match_order
 from ..order_creator import create_order, load_orders
-from .schemas import CreateOrderRequest, ProcessResponse
+from .schemas import CreateOrderRequest, ProcessResponse, RematchRequest
 
 app = FastAPI(
     title="Sales Order Entry API",
@@ -73,6 +73,20 @@ async def process(
     match = match_order(order)
     confidence = score_order(match)
     return ProcessResponse(order=order, match=match, confidence=confidence)
+
+
+@app.post("/rematch", response_model=ProcessResponse)
+def rematch(req: RematchRequest) -> ProcessResponse:
+    """Re-run matching + confidence on a human-corrected order.
+
+    Skips extraction entirely — the human's edits are treated as ground truth,
+    not re-read from the source document. Used by the Edit Fields flow so a
+    correction (e.g. a misread part number) is reflected in the match/score
+    without another OpenAI call or discarding the human's work.
+    """
+    match = match_order(req.order)
+    confidence = score_order(match)
+    return ProcessResponse(order=req.order, match=match, confidence=confidence)
 
 
 @app.post("/orders")

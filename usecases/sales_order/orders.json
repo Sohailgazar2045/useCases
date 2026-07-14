@@ -35,5 +35,140 @@
     "held_line_count": 0,
     "created_at": "2026-07-06 20:15:30",
     "message": "Sales order created successfully in D365 F&O"
+  },
+  {
+    "status": "success",
+    "order_id": "SO-2026-00125",
+    "customer_id": "CUST001",
+    "customer_name": "ABC Medical Inc",
+    "po_number": "PO-2026-001",
+    "delivery_date": "15 July 2026",
+    "line_count": 3,
+    "line_items": [
+      {
+        "part_number": "MED-1001",
+        "description": "Surgical Gloves — Latex Free, Size Medium (Box of 100)",
+        "quantity": 10,
+        "unit_price": 45.0,
+        "line_total": 450.0
+      },
+      {
+        "part_number": "MED-1002",
+        "description": "Sterile Bandages — Standard Wound Dressing Pack",
+        "quantity": 5,
+        "unit_price": 23.5,
+        "line_total": 117.5
+      },
+      {
+        "part_number": "MED-1003",
+        "description": "Disposable Syringes — 5ml, Sterile, Single Use Pack",
+        "quantity": 20,
+        "unit_price": 18.0,
+        "line_total": 360.0
+      }
+    ],
+    "total_amount": 927.5,
+    "partial": false,
+    "held_line_count": 0,
+    "human_edited": false,
+    "original_extraction": null,
+    "corrections": [],
+    "created_at": "2026-07-14 18:50:26",
+    "message": "Sales order created successfully in D365 F&O"
+  },
+  {
+    "status": "success",
+    "order_id": "SO-2026-00126",
+    "customer_id": "CUST003",
+    "customer_name": "Delta Supplies Ltd",
+    "po_number": "DSL-ORD-2026-07",
+    "delivery_date": "25 July 2026",
+    "line_count": 3,
+    "line_items": [
+      {
+        "part_number": "MED-1001",
+        "description": "Surgical gloves - latex free med",
+        "quantity": 10,
+        "unit_price": 45.0,
+        "line_total": 450.0
+      },
+      {
+        "part_number": "MED-1002",
+        "description": "Sterile bandages (same as prev order)",
+        "quantity": 5,
+        "unit_price": 23.5,
+        "line_total": 117.5
+      },
+      {
+        "part_number": "MED-1003",
+        "description": "Disposable syringes 5ml sterile",
+        "quantity": 20,
+        "unit_price": 18.0,
+        "line_total": 360.0
+      }
+    ],
+    "total_amount": 927.5,
+    "partial": false,
+    "held_line_count": 0,
+    "human_edited": true,
+    "original_extraction": {
+      "customer_name": "Delta Supplies Ltd.",
+      "po_number": "DSL-ORD-2026-07",
+      "order_date": "1st July 2026",
+      "delivery_date": "25 July 2026",
+      "shipping_address": "789 Supply Road, Dallas TX 75201",
+      "line_items": [
+        {
+          "part_number": "MED-1001",
+          "description": "Surgical gloves - latex free med",
+          "quantity": 10,
+          "unit_price": 45.0
+        },
+        {
+          "part_number": null,
+          "description": "Sterile bandages (same as prev order)",
+          "quantity": 5,
+          "unit_price": 23.5
+        },
+        {
+          "part_number": "MED-1003",
+          "description": "Disposable syringes 5ml sterile",
+          "quantity": 20,
+          "unit_price": 18.0
+        },
+        {
+          "part_number": "MED-9999",
+          "description": "Wound care kits - new item see note",
+          "quantity": 10,
+          "unit_price": 99.0
+        },
+        {
+          "part_number": null,
+          "description": "Nitrile gloves (if MED-1001 unavail)",
+          "quantity": 50,
+          "unit_price": null
+        }
+      ],
+      "_source": "image"
+    },
+    "corrections": [
+      {
+        "field": "line_items[1].part_number",
+        "was": null,
+        "now": "MED-1002"
+      },
+      {
+        "field": "line_items[3]",
+        "was": "(present)",
+        "now": "(removed)"
+      },
+      {
+        "field": "line_items[4]",
+        "was": "(present)",
+        "now": "(removed)"
+      }
+    ],
+    "created_at": "2026-07-14 19:05:51",
+    "message": "Sales order created successfully in D365 F&O"
   }
 ]

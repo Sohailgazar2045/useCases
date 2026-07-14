@@ -20,6 +20,7 @@ import streamlit as st
 from shared.config import API_BASE_URL
 from .api.runtime import api_is_up, ensure_api_running
 from .confidence import RECOMMENDATION_LABEL
+from .edits import diff_order
 
 _TIMEOUT = 120  # seconds — extraction can take a while on vision
 
@@ -53,6 +54,17 @@ def api_process(source_kind: str, *, data: bytes | None = None,
         resp = requests.post(
             url, data={"source_kind": source_kind}, files=files, timeout=_TIMEOUT
         )
+    resp.raise_for_status()
+    return resp.json()
+
+
+def api_rematch(order: dict) -> dict:
+    """POST a human-corrected order to /rematch and return {order, match, confidence}.
+
+    No extraction happens here — the human's fields are treated as ground truth,
+    and only the downstream match + confidence scoring is re-run.
+    """
+    resp = requests.post(f"{API_BASE_URL}/rematch", json={"order": order}, timeout=_TIMEOUT)
     resp.raise_for_status()
     return resp.json()
 
@@ -144,6 +156,9 @@ def render() -> None:
         st.session_state.preview_kind = None   # "pdf" | "image" | "text"
         st.session_state.preview_bytes = None
         st.session_state.preview_text = None
+        st.session_state.original_order = None  # AI's first extraction, never overwritten
+        st.session_state.editing = False
+        st.session_state.edit_count = 0
 
     # ----------------------------------------------------------------------- #
     # Sidebar — input
@@ -191,9 +206,11 @@ def render() -> None:
 
     if st.sidebar.button("🔄 Reset", use_container_width=True):
         for k in ("order", "match", "confidence", "created",
-                  "preview_kind", "preview_bytes", "preview_text"):
+                  "preview_kind", "preview_bytes", "preview_text", "original_order"):
             st.session_state[k] = None
         st.session_state.auto_created = False
+        st.session_state.editing = False
+        st.session_state.edit_count = 0
         st.rerun()
 
     # ---- Saved orders (from GET /orders) ---------------------------------- #
@@ -258,6 +275,8 @@ def render() -> None:
         else:
             st.session_state.created = None
             st.session_state.auto_created = False
+            st.session_state.editing = False
+            st.session_state.edit_count = 0
             try:
                 with st.spinner("Processing via API (OpenAI extraction + match)…"):
                     result = call()
@@ -267,6 +286,7 @@ def render() -> None:
                 st.session_state.order = order
                 st.session_state.match = match
                 st.session_state.confidence = confidence
+                st.session_state.original_order = order  # pristine AI extraction
 
                 # Straight-through: a 100% match (recommendation == auto_approve)
                 # is created immediately, skipping manual approval.
@@ -325,7 +345,20 @@ def render() -> None:
 # Results panel
 # --------------------------------------------------------------------------- #
 def _render_results(order: dict, match: dict, confidence: dict | None) -> None:
+    if st.session_state.editing:
+        _render_edit_form(order)
+        return
+
     cust = match["customer"]
+
+    # ---- Human-edit banner -------------------------------------------------#
+    if order.get("_edited"):
+        st.info(f"✏️ Human-corrected (edit #{order.get('_edit_count', 1)}) — re-matched against master data.")
+        changes = diff_order(st.session_state.original_order, order)
+        if changes:
+            with st.expander(f"What changed ({len(changes)} field(s))"):
+                for c in changes:
+                    st.write(f"**{c['field']}**: `{c['was']}` → `{c['now']}`")
 
     # ---- Confidence + AI recommendation ----------------------------------- #
     if confidence:
@@ -427,14 +460,23 @@ def _render_actions(order: dict, match: dict, confidence: dict | None) -> None:
         if only_valid:
             include_idx = usable
 
+    flagged = bool(match["flags"]) or (confidence or {}).get("recommendation") != "auto_approve"
+
     a1, a2, a3 = st.columns(3)
     with a1:
         approve = st.button("✅ Approve Order", type="primary", use_container_width=True)
     with a2:
-        st.button("✏️ Edit Fields", use_container_width=True, disabled=True,
-                  help="Inline editing — stub for demo")
+        edit = st.button(
+            "✏️ Edit Fields", use_container_width=True, disabled=not flagged,
+            help="Correct what the AI misread, then re-match against master data."
+            if flagged else "Nothing to correct — clean match.",
+        )
     with a3:
         reject = st.button("❌ Reject Order", use_container_width=True)
+
+    if edit:
+        st.session_state.editing = True
+        st.rerun()
 
     if approve:
         try:
@@ -445,6 +487,88 @@ def _render_actions(order: dict, match: dict, confidence: dict | None) -> None:
             st.error(f"Order creation failed: {_api_error(exc)}")
     if reject:
         st.warning("Order rejected. Nothing was sent to D365.")
+
+
+def _render_edit_form(order: dict) -> None:
+    """Editable form for a flagged order. On save, re-matches (no re-extraction)
+    against master data via /rematch and returns to the results view."""
+    st.info("Correct any field the AI misread below, then re-match against master data.")
+
+    with st.form("edit_order_form"):
+        st.markdown("**Order details**")
+        c1, c2 = st.columns(2)
+        with c1:
+            customer_name = st.text_input("Customer name", value=order.get("customer_name") or "")
+            po_number = st.text_input("PO number", value=order.get("po_number") or "")
+        with c2:
+            delivery_date = st.text_input("Delivery date", value=order.get("delivery_date") or "")
+            shipping_address = st.text_input("Ship to", value=order.get("shipping_address") or "")
+
+        st.markdown("**Line items**")
+        st.caption("Add, remove, or correct rows. Use the exact catalog part number where possible.")
+        rows = [
+            {
+                "part_number": ln.get("part_number") or "",
+                "description": ln.get("description") or "",
+                "quantity": ln.get("quantity") or 0,
+                "unit_price": ln.get("unit_price") or 0.0,
+            }
+            for ln in (order.get("line_items") or [])
+        ]
+        edited_rows = st.data_editor(
+            rows,
+            num_rows="dynamic",
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "part_number": st.column_config.TextColumn("Part No"),
+                "description": st.column_config.TextColumn("Description"),
+                "quantity": st.column_config.NumberColumn("Qty", min_value=0, step=1),
+                "unit_price": st.column_config.NumberColumn("Unit Price", min_value=0.0, format="$%.2f"),
+            },
+            key="edit_line_items",
+        )
+
+        save, cancel = st.columns(2)
+        do_save = save.form_submit_button("💾 Save & Re-match", type="primary", use_container_width=True)
+        do_cancel = cancel.form_submit_button("Cancel", use_container_width=True)
+
+    if do_cancel:
+        st.session_state.editing = False
+        st.rerun()
+
+    if do_save:
+        corrected = {
+            **order,
+            "customer_name": customer_name or None,
+            "po_number": po_number or None,
+            "delivery_date": delivery_date or None,
+            "shipping_address": shipping_address or None,
+            "line_items": [
+                {
+                    "part_number": (r.get("part_number") or "").strip() or None,
+                    "description": (r.get("description") or "").strip() or None,
+                    "quantity": r.get("quantity") or 0,
+                    "unit_price": r.get("unit_price") or 0.0,
+                }
+                for r in edited_rows
+                if (r.get("part_number") or r.get("description"))
+            ],
+            "_edited": True,
+            "_edit_count": st.session_state.edit_count + 1,
+            "_original_extraction": st.session_state.original_order,
+        }
+        try:
+            with st.spinner("Re-matching corrected order against master data…"):
+                result = api_rematch(corrected)
+            st.session_state.order = result["order"]
+            st.session_state.match = result["match"]
+            st.session_state.confidence = result["confidence"]
+            st.session_state.edit_count += 1
+            st.session_state.editing = False
+            st.rerun()
+        except Exception as exc:  # noqa: BLE001
+            st.error(f"Re-match failed: {_api_error(exc)}")
 
 
 def _render_confirmation(res: dict) -> None:
@@ -468,5 +592,8 @@ def _render_confirmation(res: dict) -> None:
     )
     if res.get("held_line_count"):
         st.caption(f"⏸️ {res['held_line_count']} line(s) held for follow-up.")
+    if res.get("human_edited"):
+        n = len(res.get("corrections") or [])
+        st.caption(f"✏️ Human-corrected before approval — {n} field(s) changed (see audit record below).")
     st.caption(res["message"])
     st.json(res, expanded=False)

@@ -13,6 +13,8 @@ import os
 from datetime import datetime
 from typing import Any
 
+from .edits import diff_order
+
 # Local JSON "database" that stands in for D365. Every approved order is
 # appended here so the demo has a visible, persistent audit trail.
 ORDERS_DB = os.path.join(os.path.dirname(__file__), "orders.json")
@@ -112,6 +114,9 @@ def create_order(
 
     partial = include_line_indexes is not None and len(saved_lines) < len(all_lines)
 
+    original_extraction = order.get("_original_extraction")
+    human_edited = bool(order.get("_edited"))
+
     confirmation = {
         "status": "success",
         "order_id": order_id,
@@ -124,6 +129,9 @@ def create_order(
         "total_amount": round(total, 2),
         "partial": partial,
         "held_line_count": len(all_lines) - len(saved_lines),
+        "human_edited": human_edited,
+        "original_extraction": original_extraction if human_edited else None,
+        "corrections": diff_order(original_extraction, order) if human_edited else [],
         "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "message": (
             "Partial sales order created in D365 F&O "
